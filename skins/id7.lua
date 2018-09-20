@@ -39,16 +39,16 @@ addSkin(skinData)
 local labelType = "8k"
 local curDriftAlpha = 0
 
-function angle(veh)
-	if not veh then return false end
-	local vx,vy,vz = table.unpack(GetEntityVelocity(veh))
+function angle(vehicle)
+	if not vehicle then return false end
+	local vx,vy,vz = table.unpack(GetEntityVelocity(vehicle))
 	local modV = math.sqrt(vx*vx + vy*vy)
 
 
-	local rx,ry,rz = table.unpack(GetEntityRotation(veh,0))
+	local rx,ry,rz = table.unpack(GetEntityRotation(vehicle,0))
 	local sn,cs = -math.sin(math.rad(rz)), math.cos(math.rad(rz))
 
-	if GetEntitySpeed(veh)* 3.6 < 40 or GetVehicleCurrentGear(veh) == 0 then return 0,modV end --speed over 25 km/h
+	if GetEntitySpeed(vehicle)* 3.6 < 40 or GetVehicleCurrentGear(vehicle) == 0 then return 0,modV end --speed over 25 km/h
 
 	local cosX = (sn*vx + cs*vy)/modV
 	return math.deg(math.acos(cosX))*0.5, modV
@@ -75,42 +75,49 @@ SpeedChimeActive = false
 
 Citizen.CreateThread(function()
 	while true do
+
 		Citizen.Wait(0)
+
 		if getCurrentSkin() == skinData.skinName then
 			speedTable = {}
 			toggleFuelGauge(false)
-			veh = GetVehiclePedIsUsing(GetPlayerPed(-1))
-			if DoesEntityExist(veh) and not IsEntityDead(veh) then
-				if GetVehicleClass(veh) >= 0 and GetVehicleClass(veh) <= 5 then
+
+			local playerPed = PlayerPedId()
+			local vehicle = GetVehiclePedIsUsing(playerPed)
+			local vehicleClass = GetVehicleClass(vehicle)
+
+			if DoesEntityExist(vehicle) and not IsEntityDead(vehicle) then
+				if vehicleClass >= 0 and vehicleClass <= 5 then
 					labelType = "8k"
 					cst.rpmScale = 235
-				elseif GetVehicleClass(veh) == 6 then
+				elseif vehicleClass == 6 then
 					labelType = "9k"
 					cst.rpmScale = 235
-				elseif GetVehicleClass(veh) == 7 then
+				elseif vehicleClass == 7 then
 					labelType = "10k"
 					cst.rpmScale = 235
-				elseif GetVehicleClass(veh) == 8 then
+				elseif vehicleClass == 8 then
 					labelType = "13k"
 					cst.rpmScale = 235
 				end
 
 				for i,theName in ipairs(Config.SpecialCars) do
-					if GetDisplayNameFromVehicleModel(GetEntityModel(veh)) == theName then
+					if GetDisplayNameFromVehicleModel(GetEntityModel(vehicle)) == theName then
 						labelType = "86"
 						cst.rpmScale = 242
-						if not SpeedChimeActive and GetEntitySpeed(veh) * 3.6 > 105.0 then
+						if not SpeedChimeActive and GetEntitySpeed(vehicle) * 3.6 > 105.0 then
 							SpeedChimeActive = true
 							TriggerEvent('fivem-speedometer:playSound', 'initiald', 0.7, true)
-						elseif SpeedChimeActive and GetEntitySpeed(veh) * 3.6 < 105.0 then
+						elseif SpeedChimeActive and GetEntitySpeed(vehicle) * 3.6 < 105.0 then
 							SpeedChimeActive = false
 							TriggerEvent('fivem-speedometer:stopSound')
 						end
+
 						break
 					end
 				end
 
-				_,lightson,highbeams = GetVehicleLightsState(veh)
+				_,lightson,highbeams = GetVehicleLightsState(vehicle)
 				if lightson == 1 or highbeams == 1 then
 					curTachometer = "night_labels_"..labelType
 				else
@@ -118,7 +125,7 @@ Citizen.CreateThread(function()
 				end
 				curSpeedometer = "nodrift_background"
 
-				local gear = GetVehicleCurrentGear(veh)+1
+				local gear = GetVehicleCurrentGear(vehicle) + 1
 
 				if not gear then gear = 1 end
 				if gear == 1 then gear = 0 end
@@ -129,13 +136,13 @@ Citizen.CreateThread(function()
 				DrawSprite(cst.ytdName, curSpeedometer, cst.centerCoords[1]+cst.SpeedoBGLoc[1],cst.centerCoords[2]+cst.SpeedoBGLoc[2],cst.SpeedoBGLoc[3],cst.SpeedoBGLoc[4], 0.0, 255, 255, 255, curAlpha)
 				DrawSprite(cst.ytdName, curTachometer, cst.centerCoords[1]+cst.TachoBGloc[1],cst.centerCoords[2]+cst.TachoBGloc[2],cst.TachoBGloc[3],cst.TachoBGloc[4], 0.0, 255, 255, 255, curAlpha)
 				DrawSprite(cst.ytdName, "gear_"..gear, cst.centerCoords[1]+cst.GearLoc[1],cst.centerCoords[2]+cst.GearLoc[2],cst.GearLoc[3],cst.GearLoc[4], 0.0, 255, 255, 255, curAlpha)
-				local speed = GetEntitySpeed(veh)
+				local speed = GetEntitySpeed(vehicle)
 
 				if useKMH then
-					speed = GetEntitySpeed(veh) * 3.6
+					speed = speed * 3.6
 					DrawSprite(cst.ytdName, "kmh", cst.centerCoords[1]+cst.UnitLoc[1],cst.centerCoords[2]+cst.UnitLoc[2],cst.UnitLoc[3],cst.UnitLoc[4], 0.0, 255, 255, 255, curAlpha)
 				else
-					speed = GetEntitySpeed(veh) * 2.236936
+					speed = speed * 2.236936
 					DrawSprite(cst.ytdName, "mph", cst.centerCoords[1]+cst.UnitLoc[1],cst.centerCoords[2]+cst.UnitLoc[2],cst.UnitLoc[3],cst.UnitLoc[4], 0.0, 255, 255, 255, curAlpha)
 				end
 
@@ -159,16 +166,16 @@ Citizen.CreateThread(function()
 					DrawSprite(cst.ytdName, "speed_digits_9", cst.centerCoords[1]+cst.Speed2Loc[1],cst.centerCoords[2]+cst.Speed2Loc[2],cst.Speed2Loc[3],cst.Speed2Loc[4], 0.0, 255, 255, 255, curAlpha)
 					DrawSprite(cst.ytdName, "speed_digits_9", cst.centerCoords[1]+cst.Speed1Loc[1],cst.centerCoords[2]+cst.Speed1Loc[2],cst.Speed1Loc[3],cst.Speed1Loc[4], 0.0, 255, 255, 255, curAlpha)
 				end
-				if GetPedInVehicleSeat(veh, -1) == GetPlayerPed(-1) and GetVehicleClass(veh) >= 0 and GetVehicleClass(veh) < 13 or GetVehicleClass(veh) >= 17 then
-					if angle(veh) >= 10 and angle(veh) <= 18 then
+				if GetPedInVehicleSeat(vehicle, -1) == playerPed and vehicleClass >= 0 and vehicleClass < 13 or vehicleClass >= 17 then
+					if angle(vehicle) >= 10 and angle(vehicle) <= 18 then
 						driftSprite = "drift_blue"
 						DrawSprite(cst.ytdName, driftSprite, cst.centerCoords[1]+cst.FuelBGLoc[1],cst.centerCoords[2]+cst.FuelBGLoc[2],cst.FuelBGLoc[3],cst.FuelBGLoc[4], 0.0, 255, 255, 255, curDriftAlpha)
 						BlinkDriftText(false)
-					elseif angle(veh) > 18 then
+					elseif angle(vehicle) > 18 then
 						driftSprite = "drift_yellow"
 						DrawSprite(cst.ytdName, driftSprite, cst.centerCoords[1]+cst.FuelBGLoc[1],cst.centerCoords[2]+cst.FuelBGLoc[2],cst.FuelBGLoc[3],cst.FuelBGLoc[4], 0.0, 255, 255, 255, curDriftAlpha)
 						BlinkDriftText(false)
-					elseif angle(veh) < 10 then
+					elseif angle(vehicle) < 10 then
 						driftSprite = "drift_blue"
 						DrawSprite(cst.ytdName, driftSprite, cst.centerCoords[1]+cst.FuelBGLoc[1],cst.centerCoords[2]+cst.FuelBGLoc[2],cst.FuelBGLoc[3],cst.FuelBGLoc[4], 0.0, 255, 255, 255, curDriftAlpha)
 						BlinkDriftText(true)
@@ -177,6 +184,8 @@ Citizen.CreateThread(function()
 					curDriftAlpha = 0
 				end
 			end
+		else
+			Citizen.Wait(500)
 		end
 	end
 end)

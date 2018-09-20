@@ -83,24 +83,28 @@ Citizen.CreateThread(function()
 	end
 end)
 
-curNeedle, curTachometer, curSpeedometer, curFuelGauge, curAlpha = "needle_day", "tachometer_day", "speedometer_day", "fuelgauge_day",0
+curNeedle, curTachometer, curSpeedometer, curFuelGauge, curAlpha = "needle_day", "tachometer_day", "speedometer_day", "fuelgauge_day", 0
 RPM, degree, blinkertick, showBlinker = 0, 0, 0, false
 
 Citizen.CreateThread(function()
 	while true do
 		Citizen.Wait(0)
-		veh = GetVehiclePedIsUsing(GetPlayerPed(-1))
+		local playerPed = PlayerPedId()
+		local vehicle = GetVehiclePedIsUsing(playerPed)
 		if overwriteAlpha then curAlpha = 0 end
+
+		-- fade away
 		if not overwriteAlpha then
-			if IsPedInAnyVehicle(GetPlayerPed(-1), true) and GetSeatPedIsTryingToEnter(GetPlayerPed(-1)) == -1 or GetPedInVehicleSeat(veh, -1) == GetPlayerPed(-1) then
+			if IsPedInAnyVehicle(playerPed, true) and GetSeatPedIsTryingToEnter(playerPed) == -1 or GetPedInVehicleSeat(vehicle, -1) == playerPed then
 				if curAlpha >= 255 then
 					curAlpha = 255
 				else
 					curAlpha = curAlpha + 5
 				end
-			elseif not IsPedInAnyVehicle(GetPlayerPed(-1), false) then
+			elseif not IsPedInAnyVehicle(playerPed, false) then
 				if curAlpha <= 0 then
 					curAlpha = 0
+					Citizen.Wait(500)
 				else
 					curAlpha = curAlpha - 5
 				end
@@ -113,17 +117,17 @@ Citizen.CreateThread(function()
 				Citizen.Wait(1)
 			end
 		else
-			if DoesEntityExist(veh) and not IsEntityDead(veh) then
+			if DoesEntityExist(vehicle) and not IsEntityDead(vehicle) then
 				degree, step = 0, cst.RotStep
-				RPM = GetVehicleCurrentRpm(veh)
-				if not GetIsVehicleEngineRunning(veh) then RPM = 0 end
+				RPM = GetVehicleCurrentRpm(vehicle)
+				if not GetIsVehicleEngineRunning(vehicle) then RPM = 0 end
 				if RPM > 0.99 then
 					RPM = RPM * 100
 					RPM = RPM + math.random(-2, 2)
 					RPM = RPM / 100
 				end
 
-				blinkerState = GetVehicleIndicatorLights(veh)
+				blinkerState = GetVehicleIndicatorLights(vehicle)
 				if blinkerState == 0 then
 					blinkerLeft,blinkerRight = false,false
 				elseif blinkerState == 1 then
@@ -134,7 +138,7 @@ Citizen.CreateThread(function()
 					blinkerLeft,blinkerRight = true,true
 				end
 
-				engineHealth = GetVehicleEngineHealth(veh)
+				engineHealth = GetVehicleEngineHealth(vehicle)
 				if engineHealth <= 350 and engineHealth > 100 then
 					showDamageYellow,showDamageRed = true,false
 				elseif engineHealth <= 100 then
@@ -143,9 +147,9 @@ Citizen.CreateThread(function()
 					showDamageYellow,showDamageRed = false, false
 				end
 
-				OilLevel = GetVehicleOilLevel(veh)
-				FuelLevel = GetVehicleFuelLevel(veh)
-				MaxFuelLevel = Citizen.InvokeNative(0x642FC12F, veh, "CHandlingData", "fPetrolTankVolume", Citizen.ReturnResultAnyway(), Citizen.ResultAsFloat())
+				OilLevel = GetVehicleOilLevel(vehicle)
+				FuelLevel = GetVehicleFuelLevel(vehicle)
+				MaxFuelLevel = Citizen.InvokeNative(0x642FC12F, vehicle, "CHandlingData", "fPetrolTankVolume", Citizen.ReturnResultAnyway(), Citizen.ResultAsFloat())
 				if FuelLevel <= MaxFuelLevel*0.25 and FuelLevel > MaxFuelLevel*0.13 then
 					showLowFuelYellow,showLowFuelRed = true,false
 				elseif FuelLevel <= MaxFuelLevel*0.2 then
@@ -159,7 +163,7 @@ Citizen.CreateThread(function()
 					showLowOil = false
 				end
 
-				_,lightson,highbeams = GetVehicleLightsState(veh)
+				_,lightson,highbeams = GetVehicleLightsState(vehicle)
 				if lightson == 1 or highbeams == 1 then
 					curNeedle, curTachometer, curSpeedometer, curFuelGauge = "needle", "tachometer", "speedometer", "fuelgauge"
 					if highbeams == 1 then
@@ -171,9 +175,9 @@ Citizen.CreateThread(function()
 					curNeedle, curTachometer, curSpeedometer, curFuelGauge, showHighBeams, showLowBeams = "needle_day", "tachometer_day", "speedometer_day", "fuelgauge_day", false, false
 				end
 
-				if GetEntitySpeed(veh) > 0 then degree=(GetEntitySpeed(veh)*2.036936)*step end
+				if GetEntitySpeed(vehicle) > 0 then degree=(GetEntitySpeed(vehicle)*2.036936)*step end
 				if degree > 290 then degree=290 end
-				if GetVehicleClass(veh) >= 0 and GetVehicleClass(veh) < 13 or GetVehicleClass(veh) >= 17 then
+				if GetVehicleClass(vehicle) >= 0 and GetVehicleClass(vehicle) < 13 or GetVehicleClass(vehicle) >= 17 then
 				else
 					curAlpha = 0
 				end
@@ -186,7 +190,7 @@ Citizen.CreateThread(function()
 			end
 
 			if overwriteChecks then
-				showHighBeams,showLowBeams,showBlinker,blinkerLeft,blinkerRight,showDamageRed,showLowFuelRed,showLowOil = true, true, true, true, true ,true, true, true
+				showHighBeams, showLowBeams, showBlinker, blinkerLeft, blinkerRight, showDamageRed, showLowFuelRed, showLowOil = true, true, true, true, true, true, true, true
 			end
 			if showHighBeams then
 				DrawSprite(cst.ytdName, cst.BeamLight or "lights", cst.centerCoords[1]+cst.lightsLoc[1],cst.centerCoords[2]+cst.lightsLoc[2],cst.lightsLoc[3],cst.lightsLoc[4],0, 0, 50, 240, curAlpha)
@@ -247,10 +251,10 @@ end)
 Citizen.CreateThread(function()
 	local fakeTimer = 0
 	while true do
-		Citizen.Wait(2000)
-		fakeTimer = fakeTimer + 2000
+		Citizen.Wait(1000)
+		fakeTimer = fakeTimer + 1000
 
-		if fakeTimer == 10000 then
+		if fakeTimer == 5000 then
 			useKMH		= (GetProfileSetting(227) == 1)
 			fakeTimer	= 0
 		end
