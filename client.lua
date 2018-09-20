@@ -101,40 +101,6 @@ RegisterCommand("togglespeedo", function(source, args, rawCommand)
 end, false)
 
 
-Citizen.CreateThread(function()
-	while true do
-		Citizen.Wait(300)
-		inVehicleAtGetin = IsPedInAnyVehicle(PlayerPedId(), true)
-		inVehicle = IsPedInAnyVehicle(PlayerPedId(), false)
-		veh = GetVehiclePedIsUsing(PlayerPedId())
-		DoesCurrentVehExist = (DoesEntityExist(veh) and not IsEntityDead(veh))
-		if DoesCurrentVehExist then 
-			vehclass = GetVehicleClass(veh)
-			engineHealth = GetVehicleEngineHealth(veh)
-			OilLevel = GetVehicleOilLevel(veh)
-			FuelLevel = GetVehicleFuelLevel(veh)
-			_,lightson,highbeams = GetVehicleLightsState(veh)
-			MaxFuelLevel = Citizen.InvokeNative(0x642FC12F, veh, "CHandlingData", "fPetrolTankVolume", Citizen.ReturnResultAnyway(), Citizen.ResultAsFloat())
-		end
-	end
-end)
-Citizen.CreateThread(function()
-	while true do
-		Citizen.Wait(10)
-		degree, step = 0, cst.RotStep
-		if DoesCurrentVehExist then 
-			RPM = GetVehicleCurrentRpm(veh)
-			if not GetIsVehicleEngineRunning(veh) then RPM = 0 end -- fix for R*'s Engine RPM fuckery
-			if RPM > 0.99 then
-				RPM = RPM*100
-				RPM = RPM+math.random(-2,2)
-				RPM = RPM/100
-			end
-			if GetEntitySpeed(veh) > 0 then degree=(GetEntitySpeed(veh)*2.036936)*step end
-			if degree > 290 then degree=290 end
-		end
-	end
-end)
 
 curNeedle, curTachometer, curSpeedometer, curFuelGauge, curAlpha = "needle_day", "tachometer_day", "speedometer_day", "fuelgauge_day",0
 RPM, degree, blinkertick, showBlinker = 0, 0, 0, false
@@ -145,15 +111,16 @@ Citizen.CreateThread(function()
 	TriggerEvent('chat:addSuggestion', '/speedoskin', 'change the speedometer skin', { {name='skin', help="the skin name"} } )
 	while true do
 		Citizen.Wait(0)
+		veh = GetVehiclePedIsUsing(GetPlayerPed(-1))
 		if overwriteAlpha then curAlpha = 0 end
 		if not overwriteAlpha then
-			if inVehicleAtGetin and GetSeatPedIsTryingToEnter(GetPlayerPed(-1)) == -1 or GetPedInVehicleSeat(veh, -1) == PlayerPedId() then
+			if IsPedInAnyVehicle(GetPlayerPed(-1),true) and GetSeatPedIsTryingToEnter(GetPlayerPed(-1)) == -1 or GetPedInVehicleSeat(veh, -1) == GetPlayerPed(-1) then
 					if curAlpha >= 255 then
 						curAlpha = 255
 					else
 						curAlpha = curAlpha+5
 					end
-			elseif not inVehicle then
+			elseif not IsPedInAnyVehicle(GetPlayerPed(-1),false) then
 					if curAlpha <= 0 then
 						curAlpha = 0
 					else
@@ -168,7 +135,15 @@ Citizen.CreateThread(function()
 				Wait(0)
 			end
 		else
-			if DoesCurrentVehExist then
+			if DoesEntityExist(veh) and not IsEntityDead(veh) then
+				degree, step = 0, cst.RotStep
+				RPM = GetVehicleCurrentRpm(veh)
+				if not GetIsVehicleEngineRunning(veh) then RPM = 0 end -- fix for R*'s Engine RPM fuckery
+				if RPM > 0.99 then
+					RPM = RPM*100
+					RPM = RPM+math.random(-2,2)
+					RPM = RPM/100
+				end
 				blinkerstate = GetVehicleIndicatorLights(veh) -- owo whats this
 				if blinkerstate == 0 then
 					blinkerleft,blinkerright = false,false
@@ -179,6 +154,7 @@ Citizen.CreateThread(function()
 				elseif blinkerstate == 3 then
 					blinkerleft,blinkerright = true,true
 				end
+				engineHealth = GetVehicleEngineHealth(veh)
 				if engineHealth <= 350 and engineHealth > 100 then
 					showDamageYellow,showDamageRed = true,false
 				elseif engineHealth <= 100 then
@@ -186,6 +162,9 @@ Citizen.CreateThread(function()
 				else
 					showDamageYellow,showDamageRed = false, false
 				end
+				OilLevel = GetVehicleOilLevel(veh)
+				FuelLevel = GetVehicleFuelLevel(veh)
+				MaxFuelLevel = Citizen.InvokeNative(0x642FC12F, veh, "CHandlingData", "fPetrolTankVolume", Citizen.ReturnResultAnyway(), Citizen.ResultAsFloat())
 				if FuelLevel <= MaxFuelLevel*0.25 and FuelLevel > MaxFuelLevel*0.13 then
 					showLowFuelYellow,showLowFuelRed = true,false
 				elseif FuelLevel <= MaxFuelLevel*0.2 then
@@ -198,6 +177,7 @@ Citizen.CreateThread(function()
 				else
 					showLowOil = false
 				end
+				_,lightson,highbeams = GetVehicleLightsState(veh)
 				if lightson == 1 or highbeams == 1 then
 					curNeedle, curTachometer, curSpeedometer, curFuelGauge = "needle", "tachometer", "speedometer", "fuelgauge"
 					if highbeams == 1 then
@@ -208,8 +188,9 @@ Citizen.CreateThread(function()
 				else
 					curNeedle, curTachometer, curSpeedometer, curFuelGauge, showHighBeams, showLowBeams = "needle_day", "tachometer_day", "speedometer_day", "fuelgauge_day", false, false
 				end
-				if vehclass >= 0 and vehclass < 13 or vehclass >= 17 then
-					
+				if GetEntitySpeed(veh) > 0 then degree=(GetEntitySpeed(veh)*2.036936)*step end
+				if degree > 290 then degree=290 end
+				if GetVehicleClass(veh) >= 0 and GetVehicleClass(veh) < 13 or GetVehicleClass(veh) >= 17 then
 				else
 					curAlpha = 0
 				end
