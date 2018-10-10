@@ -55,11 +55,14 @@ function angle(vehicle)
 end
 
 local function BlinkDriftText(hide)
-	if hide == true or goDown == true then
-		curDriftAlpha = curDriftAlpha-15
-	elseif not hide or goDown == false then
-		curDriftAlpha = curDriftAlpha+15
+	if overwriteAlpha then curDriftAlpha = 0 return end
+
+	if hide or goDown then
+		curDriftAlpha = curDriftAlpha - 15
+	elseif not hide or not goDown then
+		curDriftAlpha = curDriftAlpha + 15
 	end
+
 	if curDriftAlpha <= 0 then
 		curDriftAlpha = 0
 		goDown = false
